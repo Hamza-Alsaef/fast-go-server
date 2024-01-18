@@ -1,0 +1,73 @@
+const fs = require("fs");
+const sharp = require("sharp");
+const crypto = require("crypto");
+const utils = require("../../../utils");
+
+module.exports.storeFile = async (file, title = "", compress = true) => {
+  let path = "";
+
+  try {
+    // Reading input file
+   
+
+    
+
+    const readFile = Buffer.from(file.base,"base64")
+    // Decide file's name on disk
+    const diskName = title
+      ? `${title}_${utils.getCurrentDate()}`
+      : crypto.randomUUID();
+
+    // Get file's extenstion
+    const extension = "jpeg";
+
+    // Writing file to local disk storage
+    const name = utils.filterName(`${diskName}.${extension}`);
+    path = `/${name}`;
+    fs.writeFileSync(`./uploads${path}`, readFile, "utf8");
+
+    if (compress) {
+
+      const isCompressed = await this.compressPhoto(`./uploads${path}`);
+      
+      if (isCompressed) {
+        return { originalName: file?.name, name, path };
+      }
+    } else {
+      return { originalName: file?.name, name, path };
+    }
+  } catch (err) {
+    // Delete stored file in case of error
+    await this.deleteFile(path);
+    throw err;
+  }
+};
+
+module.exports.deleteFile = async (filePath) => {
+  try {
+    fs.unlink(`./uploads${filePath}`, (err) => {});
+    return true;
+  } catch (err) {
+    throw err;
+  }
+};
+
+module.exports.compressPhoto = async (path) => {
+  try {
+
+    // resize and compress the image using sharp
+    const outputBuffer = await sharp(path)
+      .resize(400, 400) // set the maximum width and height to 400 pixels
+      .png({ quality: 80 }) // compress the image to 80% quality PNG
+      .toBuffer()
+
+      
+    fs.writeFileSync(path, outputBuffer);
+
+    return outputBuffer;
+  } catch (err) {
+    await this.deleteFile(path);
+
+    throw err;
+  }
+};
